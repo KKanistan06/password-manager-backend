@@ -23,3 +23,7 @@ const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+app.get('/', (req, res) => {
+  res.send('✅ Password Manager Backend is Running Successfully!');
+});
