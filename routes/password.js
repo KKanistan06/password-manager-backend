@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const Password = require('../models/Password');
-const authenticateToken = require('/auth');
+const authenticateToken = require('auth');
 const CryptoJS = require('crypto-js');
 
 const CRYPTO_SECRET = process.env.CRYPTO_SECRET || 'change_this_secret';
@@ -92,4 +92,5 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
 
