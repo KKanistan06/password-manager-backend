@@ -1,96 +1,53 @@
-// backend/routes/password.js
 const express = require('express');
-const router = express.Router();
 const Password = require('../models/Password');
-const authenticateToken = require('auth');
-const CryptoJS = require('crypto-js');
+const authMiddleware = require('../middleware/authMiddleware');
 
-const CRYPTO_SECRET = process.env.CRYPTO_SECRET || 'change_this_secret';
+const router = express.Router();
 
-// Add a new password entry
-router.post('/add', authenticateToken, async (req, res) => {
+// Add a new password
+router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { applicationName, usernameOrEmail, password, websiteURL, notes } = req.body;
+    const { applicationName, usernameOrEmail, password, websiteUrl } = req.body;
 
-    if (!applicationName || !usernameOrEmail || !password) {
-      return res.status(400).json({ message: 'applicationName, usernameOrEmail and password are required.' });
-    }
-
-    // Encrypt password before storing
-    const encryptedPassword = CryptoJS.AES.encrypt(password, CRYPTO_SECRET).toString();
-
-    const entry = new Password({
-      userId: req.user.userId,
+    const newPassword = new Password({
+      userId: req.user,
       applicationName,
       usernameOrEmail,
-      encryptedPassword,
-      websiteURL: websiteURL || '',
-      notes: notes || ''
+      password,
+      websiteUrl
     });
 
-    await entry.save();
-    // Do not return decrypted password
-    res.status(201).json({
-      message: 'Password saved successfully',
-      data: {
-        id: entry._id,
-        applicationName: entry.applicationName,
-        usernameOrEmail: entry.usernameOrEmail,
-        websiteURL: entry.websiteURL,
-        notes: entry.notes,
-        createdAt: entry.createdAt
-      }
-    });
-  } catch (err) {
-    console.error('Error saving password:', err);
-    res.status(500).json({ message: 'Server error' });
+    await newPassword.save();
+    res.status(201).json({ message: 'Password saved successfully', password: newPassword });
+  } catch (error) {
+    console.error('Error saving password:', error);
+    res.status(500).json({ message: 'Server error while saving password' });
   }
 });
 
-// Get all password entries for logged-in user (decrypted)
-router.get('/', authenticateToken, async (req, res) => {
+// Get all passwords for the logged-in user
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const entries = await Password.find({ userId: req.user.userId }).sort({ createdAt: -1 });
-
-    const decrypted = entries.map(e => {
-      let decryptedPassword = '';
-      try {
-        decryptedPassword = CryptoJS.AES.decrypt(e.encryptedPassword, CRYPTO_SECRET).toString(CryptoJS.enc.Utf8);
-      } catch (err) {
-        decryptedPassword = ''; // if decryption fails
-      }
-      return {
-        id: e._id,
-        applicationName: e.applicationName,
-        usernameOrEmail: e.usernameOrEmail,
-        password: decryptedPassword, // note: client will receive plain password in response body
-        websiteURL: e.websiteURL,
-        notes: e.notes,
-        createdAt: e.createdAt
-      };
-    });
-
-    res.json(decrypted);
-  } catch (err) {
-    console.error('Error fetching passwords:', err);
-    res.status(500).json({ message: 'Server error' });
+    const passwords = await Password.find({ userId: req.user }).sort({ createdAt: -1 });
+    res.json(passwords);
+  } catch (error) {
+    console.error('Error fetching passwords:', error);
+    res.status(500).json({ message: 'Server error while fetching passwords' });
   }
 });
 
-// Delete a password entry
-router.delete('/:id', authenticateToken, async (req, res) => {
+// Delete a saved password
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    const entry = await Password.findOne({ _id: req.params.id, userId: req.user.userId });
-    if (!entry) return res.status(404).json({ message: 'Entry not found' });
-
-    await Password.deleteOne({ _id: req.params.id });
-    res.json({ message: 'Entry deleted' });
-  } catch (err) {
-    console.error('Error deleting password:', err);
-    res.status(500).json({ message: 'Server error' });
+    const deletedPassword = await Password.findOneAndDelete({ _id: req.params.id, userId: req.user });
+    if (!deletedPassword) {
+      return res.status(404).json({ message: 'Password not found' });
+    }
+    res.json({ message: 'Password deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting password:', error);
+    res.status(500).json({ message: 'Server error while deleting password' });
   }
 });
 
 module.exports = router;
-
-
