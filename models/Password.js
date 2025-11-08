@@ -1,4 +1,3 @@
-// backend/models/Password.js
 const mongoose = require('mongoose');
 
 const passwordSchema = new mongoose.Schema({
@@ -9,23 +8,17 @@ const passwordSchema = new mongoose.Schema({
   },
   applicationName: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   usernameOrEmail: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
-  encryptedPassword: {
+  password: {
     type: String,
     required: true
   },
-  websiteURL: {
-    type: String,
-    default: ''
-  },
-  notes: {
+  websiteUrl: {
     type: String,
     default: ''
   }
